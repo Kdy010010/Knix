@@ -4,7 +4,7 @@
    - Persistent KnixFS, 파일 테이블, CLI, USB 드라이버
    - 스크립트 실행(exec), 바이너리 실행(execbin: ELF 확장 지원)
    - 간단한 프로세스 관리(멀티태스킹)와 시스템 호출 인터페이스
-   - NE2000 기반 간단한 네트워킹 스택 및 네트워킹 명령어(netinfo, nettest, netapp)
+   - NE2000 기반 간단한 네트워킹 스택 및 네트워킹 명령어(netinfo, nettest, netapp) 진짜 힘들다
 */
 
 /*=========================*/
