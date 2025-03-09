@@ -1,0 +1,154 @@
+/* 10x10 미로 RPG 예제 - Knix OS execbin용 */
+
+/* 미로는 10행 10열의 문자 배열로 구성됩니다. 
+   벽은 '#'로, 빈 공간은 ' '로, 시작은 'S', 목적지는 'E'로 표시합니다.
+   플레이어는 게임 시작 후 'S' 위치에서 'P'로 대체되어 움직입니다.
+*/
+main() {
+    char maze[10][11];  // 각 행 10문자 + null 종료
+
+    /* 미로 초기화 */
+    strcpy(maze[0], "##########");
+    strcpy(maze[1], "#S       #");
+    strcpy(maze[2], "#  ####  #");
+    strcpy(maze[3], "#  #     #");
+    strcpy(maze[4], "#  #  ####");
+    strcpy(maze[5], "#     #  #");
+    strcpy(maze[6], "####  #  #");
+    strcpy(maze[7], "#      # #");
+    strcpy(maze[8], "#  E     #");
+    strcpy(maze[9], "##########");
+
+    /* 플레이어 초기 위치: 미로[1][1]의 'S'를 'P'로 표시 */
+    int player_row = 1;
+    int player_col = 1;
+    maze[player_row][player_col] = 'P';
+
+    /* 게임 루프: 목적지에 도달할 때까지 반복 */
+    while (1) {
+        /* 미로 전체를 VGA에 그립니다.
+           draw_maze()는 각 셀마다 draw_char()를 호출합니다. */
+        draw_maze(maze);
+
+        /* 키 입력: kgetchar()를 통해 한 문자(ASCII 코드)를 읽음.
+           WASD 키로 이동: w(119)=위, s(115)=아래, a(97)=왼쪽, d(100)=오른쪽 */
+        int key = get_key();
+        int new_row = player_row;
+        int new_col = player_col;
+        if (key == 119) { new_row = player_row - 1; }   // w: 위로
+        else if (key == 115) { new_row = player_row + 1; }  // s: 아래로
+        else if (key == 97) { new_col = player_col - 1; }   // a: 왼쪽
+        else if (key == 100) { new_col = player_col + 1; }  // d: 오른쪽
+
+        /* 이동 가능 여부 검사: 범위 내이고, 벽('#')가 아니면 이동 */
+        if (new_row >= 0 && new_row < 10 && new_col >= 0 && new_col < 10) {
+            if (maze[new_row][new_col] != '#') {
+                /* 만약 도착지 'E'라면, "wow"를 출력하고 종료 */
+                if (maze[new_row][new_col] == 'E') {
+                    asm{
+                        mov rdi, .Lwow
+                        call vga_print
+                    }
+                    break;
+                }
+                /* 플레이어 이동: 기존 위치는 빈 공간으로, 새 위치는 'P'로 표시 */
+                maze[player_row][player_col] = ' ';
+                player_row = new_row;
+                player_col = new_col;
+                maze[player_row][player_col] = 'P';
+            }
+        }
+    }
+    return 0;
+}
+
+/* 문자열 복사 함수: src의 null-terminated 문자열을 dest로 복사 */
+strcpy(dest, src) {
+    int i = 0;
+    while (src[i] != 0) {
+        dest[i] = src[i];
+        i = i + 1;
+    }
+    dest[i] = 0;
+}
+
+/* 미로 출력 함수: 10×10 미로의 각 셀을 draw_char()를 통해 VGA에 출력 */
+draw_maze(maze) {
+    int r, c;
+    for (r = 0; r < 10; r = r + 1) {
+        for (c = 0; c < 10; c = c + 1) {
+            draw_char(r, c, maze[r][c]);
+        }
+    }
+}
+
+/* 키 입력 함수: kgetchar() (asm로 정의됨)를 호출하여 ASCII 코드를 반환 */
+get_key() {
+    return kgetchar();
+}
+
+/* ========================================================= */
+/* 아래 asm{} 블록에 VGA 출력, 키 입력, 문자 출력, 데이터 정의 */
+/* ========================================================= */
+
+asm{
+section .text
+global vga_print
+; vga_print: rdi에 전달된 null-terminated 문자열을 VGA 텍스트 메모리에 출력
+vga_print:
+    push rbp
+    mov rbp, rsp
+    mov rsi, rdi         ; rsi = 문자열 주소
+    mov rdi, 0xb8000     ; VGA 텍스트 모드 메모리 시작 주소
+print_loop:
+    mov al, byte [rsi]
+    cmp al, 0
+    je print_done
+    mov byte [rdi], al
+    mov byte [rdi+1], 0x07   ; 속성: 흰색, 검정 배경
+    add rdi, 2
+    inc rsi
+    jmp print_loop
+print_done:
+    pop rbp
+    ret
+}
+
+asm{
+global kgetchar
+; kgetchar: 키보드 데이터 포트(0x60)에서 한 바이트 읽어 rax에 반환
+kgetchar:
+    push rbp
+    mov rbp, rsp
+    mov dx, 0x60
+    in al, dx
+    movzx rax, al
+    pop rbp
+    ret
+}
+
+asm{
+global draw_char
+; draw_char: rdi = row, rsi = col, rdx = 문자
+; 계산: offset = (row * 80 + col) * 2, VGA 메모리(0xb8000)에 문자와 속성 기록
+draw_char:
+    push rbp
+    mov rbp, rsp
+    mov rax, rdi
+    imul rax, 80       ; row * 80
+    add rax, rsi       ; row*80 + col
+    shl rax, 1         ; *2 (각 문자 2바이트)
+    mov rbx, 0xb8000
+    add rbx, rax
+    mov byte [rbx], dl
+    mov byte [rbx+1], 0x07
+    pop rbp
+    ret
+}
+
+asm{
+section .data
+; 목적지 도달 시 출력할 메시지
+.Lwow:
+    db "wow", 0
+}
