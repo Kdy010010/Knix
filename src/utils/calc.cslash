@@ -1,0 +1,136 @@
+/* 두 개의 숫자를 입력받아 덧셈 후 결과 출력하는 계산기 예제 */
+
+main() {
+    // 첫 번째 숫자 입력 요청
+    asm{
+        mov rdi, .Lprompt1
+        call vga_print
+    }
+    int a = get_num();  // 첫 번째 숫자 읽기
+
+    // 두 번째 숫자 입력 요청
+    asm{
+        mov rdi, .Lprompt2
+        call vga_print
+    }
+    int b = get_num();  // 두 번째 숫자 읽기
+
+    // 덧셈 계산
+    int result = a + b;
+
+    // 정수를 문자열로 변환할 버퍼 (최대 16자리)
+    char res_str[16];
+    itoa(result, res_str);
+
+    // 결과 출력: "Result: " 접두어와 변환된 숫자 문자열 출력
+    asm{
+        mov rdi, .Lresult_prefix
+        call vga_print
+    }
+    asm{
+        mov rdi, res_str
+        call vga_print
+    }
+
+    // 종료 전, 키 입력 대기 (화면이 바로 사라지지 않도록)
+    asm{
+        call kgetchar
+    }
+
+    return result;
+}
+
+/* 키보드에서 숫자(문자)를 읽어 정수로 변환하는 함수 */
+get_num() {
+    int num = 0;
+    int ch = 0;
+    while (1) {
+        asm{
+            call kgetchar      // 키보드에서 문자 하나 읽음, 결과는 rax에 저장됨
+            mov ch, rax        // ch 변수에 저장
+        }
+        // 엔터(줄바꿈: ASCII 10 혹은 13) 입력 시 종료
+        if (ch == 10 || ch == 13) {
+            break;
+        }
+        // 입력한 문자가 숫자(ASCII '0'(48) ~ '9'(57))인 경우
+        if (ch >= 48 && ch <= 57) {
+            num = num * 10 + (ch - 48);
+        }
+    }
+    return num;
+}
+
+/* 정수 n을 null-terminated 문자열 buf로 변환하는 함수 */
+itoa(n, buf) {
+    int i = 0;
+    if (n == 0) {
+        buf[0] = 48;  // '0'
+        buf[1] = 0;
+        return;
+    }
+    while (n > 0) {
+        int digit = n % 10;
+        buf[i] = 48 + digit;
+        n = n / 10;
+        i = i + 1;
+    }
+    // 문자열 뒤집기 (역순으로 저장된 숫자를 올바른 순서로)
+    int j = 0;
+    while (j < i / 2) {
+        int temp = buf[j];
+        buf[j] = buf[i - j - 1];
+        buf[i - j - 1] = temp;
+        j = j + 1;
+    }
+    buf[i] = 0;
+}
+
+/* 
+   아래 asm{} 블록에 의해 VGA 출력 함수(vga_print)와 
+   키보드 입력 함수(kgetchar), 그리고 데이터 섹션(프롬프트 문자열)이 정의됩니다.
+*/
+
+asm{
+section .text
+global vga_print
+vga_print:
+    push rbp
+    mov rbp, rsp
+    mov rsi, rdi         ; rsi: 출력할 문자열 주소
+    mov rdi, 0xb8000     ; VGA 텍스트 모드 메모리 시작 주소
+print_loop:
+    mov al, byte [rsi]
+    cmp al, 0
+    je print_done
+    mov byte [rdi], al
+    mov byte [rdi+1], 0x07   ; 문자 속성: 흰색 글자, 검정 배경
+    add rdi, 2
+    inc rsi
+    jmp print_loop
+print_done:
+    pop rbp
+    ret
+}
+
+asm{
+global kgetchar
+kgetchar:
+    push rbp
+    mov rbp, rsp
+    mov dx, 0x60         ; 키보드 데이터 포트
+    in al, dx            ; 한 바이트 읽기
+    movzx rax, al        ; rax에 0 확장 저장
+    pop rbp
+    ret
+}
+
+asm{
+section .data
+.Lprompt1:
+    db "Enter first number: ", 0
+.Lprompt2:
+    db "Enter second number: ", 0
+.Lresult_prefix:
+    db "Result: ", 0
+}
