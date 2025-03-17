@@ -4,6 +4,7 @@
 #include "dc.h"
 
 void kprint(const char *str);
+void kprint_hex(uint32 num);
 int kgetchar();
 void kgets(char *buffer, size_t maxlen);
 int tokenize(const char *cmd, char tokens[][MAX_CMD_LEN], int max_tokens);

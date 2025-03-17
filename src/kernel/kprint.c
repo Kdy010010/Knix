@@ -10,8 +10,31 @@
 /*=========================*/
 
 void kprint(const char *str) {
-    /* Stub: 실제 환경에 맞게 출력 구현 (예: 비디오 메모리, 시리얼 포트) */
-    (void)str;
+    while (*str) {
+        __asm__ volatile (
+            "movb %0, %%al\n"
+            "outb %%al, $0x3F8\n"
+            :
+            : "r" (*str)
+        );
+        str++;
+    }
+}
+
+void kprint_hex(uint32 num) {
+    char hex_chars[] = "0123456789ABCDEF";
+    char buffer[9];  // 8자리 + NULL
+    int i;
+
+    buffer[8] = '\0';  // 문자열 끝
+
+    for (i = 7; i >= 0; i--) {
+        buffer[i] = hex_chars[num & 0xF];  // 마지막 4비트(16진수) 추출
+        num >>= 4;  // 다음 4비트 처리
+    }
+
+    kprint("0x");
+    kprint(buffer);
 }
 
 int kgetchar() {

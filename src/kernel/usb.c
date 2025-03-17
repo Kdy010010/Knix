@@ -18,6 +18,10 @@ void usb_scan() {
     usb_devices[1].device_class = USB_CLASS_HID;
     usb_devices[1].subclass = USB_SUBCLASS_BOOT;
     usb_devices[1].protocol = USB_PROTOCOL_MOUSE;
+
+    kprint("USB 장치 스캔 완료. 개수: ");
+    kprint_hex(usb_device_count);
+    kprint("\n");
 }
 
 void usb_keyboard_handler() {
