@@ -2,14 +2,15 @@
 ; NASM으로 컴파일: nasm -f bin bootloader.asm -o bootloader.bin
 
 [BITS 16]
+[ORG 0x7C00]      ; 부트로더 로드 주소 명시
 
-global _start
 section .text
+global _start
 _start:
     ; BIOS가 전달한 부트 드라이브 번호(DL)를 메모리에 저장
     mov [boot_drive], dl
 
-    ; (선택 사항) 텍스트 모드 설정 및 화면 클리어
+    ; 텍스트 모드 설정 및 화면 클리어
     mov ax, 0x0003
     int 0x10
 
@@ -19,39 +20,66 @@ _start:
 
     ; 커널 로드: 디스크의 섹터 2부터 36개 섹터를 메모리 0x8000에 로드
     mov ax, 0x0000
-    mov es, ax    ; 🔥 ES를 0으로 설정 (0x0000:0x8000)
-    mov bx, 0x8000 ; 커널 로드 주소
-    mov di, bx     ; 로드할 메모리 포인터
-    mov dh, 0      ; 헤드 0
-    mov ch, 0      ; 실린더 0
-    mov cl, 2      ; 시작 섹터 번호 (2번 섹터부터 시작)
-    mov dl, [boot_drive] ; 부트 드라이브 번호
+    mov es, ax
+    mov bx, 0x8000 ; ES:BX = 0x0000:0x8000
+    mov ah, 0x02    ; 읽기 기능
+    mov al, 36      ; 섹터 수
+    mov ch, 0       ; 실린더 0
+    mov dh, 0       ; 헤드 0
+    mov cl, 2       ; 시작 섹터 (2번)
+    mov dl, [boot_drive]
+    int 0x13
+    jc disk_error
 
-    mov cx, 36     ; 🔥 18KB 커널을 모두 로드하기 위해 36개 섹터 읽기
-read_sector:
-    push cx
-    mov ah, 0x02  ; BIOS 디스크 읽기 함수
-    mov al, 1     ; 한 번에 1 섹터씩 읽음
-    mov bx, di    ; 로드할 메모리 주소
-    int 0x13      ; BIOS 인터럽트 호출
-    jc disk_error ; 에러 발생 시 disk_error 루틴으로 이동
-    add di, 512   ; 1 섹터(512바이트) 만큼 다음 메모리 주소로 이동
-    inc cl        ; 다음 섹터 번호 (단순 증가)
-    pop cx
-    dec cx
-    jnz read_sector
-
-    ; 커널 로드 완료 후, 정확한 Entry Point로 점프 (0x0000:0x8114)
-    jmp 0x0000:0x8114  ; 🔥 Entry Point로 점프
+    jmp 0x0000:0x8000  ; 커널 실행 (성공 시)
 
 disk_error:
     mov si, err_msg
     call print_string
+    mov ah, 0x0E
+    mov al, 'E'  ; 오류 코드 표시
+    int 0x10
+    mov al, 'R'
+    int 0x10
+    mov al, ':'
+    int 0x10
+
+    ; AH 값을 16진수로 출력하는 코드 추가
+    mov al, ah
+    call print_hex
     jmp $
 
-;-------------------------------------------------------
-; 간단한 문자열 출력 서브루틴 (BIOS teletype, AH=0x0E)
-; SI가 문자열 시작 주소를 가리킵니다. 문자열은 0으로 종료됩니다.
+print_hex:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov bx, ax       ; 오류 코드(AH)를 BX에 저장
+    shr bx, 4        ; 상위 4비트를 얻음
+    call print_nibble
+
+    mov bx, ax       ; 다시 원래 값으로 복원
+    and bx, 0x0F     ; 하위 4비트만 남김
+    call print_nibble
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+print_nibble:
+    add bx, '0'      ; 숫자로 변환
+    cmp bx, '9'
+    jbe .print
+    add bx, 7        ; A~F 처리
+
+.print:
+    mov al, bl
+    int 0x10
+    ret
+
 print_string:
     mov ah, 0x0E
 .print_loop:
@@ -62,12 +90,12 @@ print_string:
     jmp .print_loop
 .done:
     ret
-;-------------------------------------------------------
 
+; 데이터 섹션 (같은 .text 섹션 내에 배치)
 boot_msg  db "Loading Knix OS kernel...", 0
 err_msg   db "Disk read error!", 0
 boot_drive db 0
 
-; 부트 섹터는 512바이트여야 하므로 남은 부분을 0으로 채움
+; 512바이트 패딩 및 부트 시그니처
 times 510 - ($ - $$) db 0
-dw 0xAA55           ; 부트 섹터 시그니처
+dw 0xAA55
