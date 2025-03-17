@@ -20,8 +20,8 @@
 void kmain() {
     kprint("OK\n");
     int ret;
-    char cmdline[MAX_CMD_LEN];
-    
+    char cmdline[MAX_CMD_LEN] = {0};
+
     ret = load_fs();
     if (ret != 0) {
         init_fs();
@@ -31,7 +31,7 @@ void kmain() {
     } else {
         kprint("기존 FS 로드 완료.\n");
     }
-    
+
     ret = load_file_table();
     if (ret != 0) {
         init_file_table();
@@ -41,13 +41,13 @@ void kmain() {
     } else {
         kprint("기존 파일 테이블 로드 완료.\n");
     }
-    
+
     init_processes();
-    
+
     usb_scan();
     kprint("USB 장치 스캔 완료.\n");
     usb_poll();
-    
+
     network_stack_init();
 
     /* 메인 CLI 루프와 함께 주기적으로 네트워킹 패킷 폴링 */
