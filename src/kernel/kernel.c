@@ -27,9 +27,9 @@ void kmain() {
         init_fs();
         ret = save_fs();
         if (ret != 0) while(1);
-        kprint("새 FS 초기화 완료.\n");
+        kprint("New FS initialization completed.\n");
     } else {
-        kprint("기존 FS 로드 완료.\n");
+        kprint("Existing FS load completed.\n");
     }
 
     ret = load_file_table();
@@ -37,15 +37,15 @@ void kmain() {
         init_file_table();
         ret = save_file_table();
         if (ret != 0) while(1);
-        kprint("새 파일 테이블 초기화 완료.\n");
+        kprint("New file table initialization completed.\n");
     } else {
-        kprint("기존 파일 테이블 로드 완료.\n");
+        kprint("Loaded an existing file table.\n");
     }
 
     init_processes();
 
     usb_scan();
-    kprint("USB 장치 스캔 완료.\n");
+    kprint("The USB device scan is complete.\n");
     usb_poll();
 
     network_stack_init();

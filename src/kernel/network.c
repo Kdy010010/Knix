@@ -31,14 +31,14 @@ int ne2k_recv(uint8 *buf, uint16 len) {
 
 void network_stack_init() {
     ne2k_init();
-    kprint("NE2000 NIC 초기화 완료.\n");
+    kprint("NE2000 NIC initialization completed.\n");
 }
 
 void network_stack_poll() {
     uint8 packet[1500];
     int received = ne2k_recv(packet, sizeof(packet));
     if (received > 0) {
-        kprint("패킷 수신됨, 크기: ");
+        kprint("Packets received, size: ");
         char numbuf[16];
         simple_itoa(received, numbuf);
         kprint(numbuf);
@@ -49,10 +49,10 @@ void network_stack_poll() {
 
 /* 네트워킹 명령어: netinfo, nettest, netapp */
 void netinfo_cmd() {
-    kprint("NE2000 NIC 정보:\n");
+    kprint("NE2000 NIC Information:\n");
     kprint("Base I/O: 0x300\n");
-    kprint("RX 버퍼: 0x40 ~ 0x80\n");
-    kprint("TX 페이지: 0x20\n");
+    kprint("RX buffer: 0x40 to 0x80\n");
+    kprint("TX Page: 0x20\n");
 }
 
 void nettest_cmd() {
@@ -62,12 +62,12 @@ void nettest_cmd() {
         test_packet[i] = i;
     }
     ne2k_send(test_packet, 64);
-    kprint("테스트 패킷 전송 완료.\n");
+    kprint("Test packet transmission completed.\n");
 }
 
 void netapp_cmd() {
-    kprint("네트워킹 응용프로그램 실행 중...\n");
+    kprint("Running a networking application...\n");
     network_stack_poll();
-    kprint("응용프로그램 종료.\n");
+    kprint("Shutting down the application.\n");
 }
 

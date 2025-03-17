@@ -80,10 +80,10 @@ int tokenize(const char *cmd, char tokens[][MAX_CMD_LEN], int max_tokens) {
 
 void exec_file(const char *filename) {
     int idx = find_file_index(filename);
-    if (idx == -1) { kprint("파일을 찾을 수 없습니다.\n"); return; }
+    if (idx == -1) { kprint("File not found.\n"); return; }
     uint8 buffer[BLOCK_SIZE * MAX_DIRECT_BLOCKS];
     if (knixfs_read_file(&file_table[idx].inode, buffer, sizeof(buffer)) != 0) {
-       kprint("파일 읽기 오류.\n");
+       kprint("File read error.\n");
        return;
     }
     char *ptr = (char*)buffer;
@@ -100,24 +100,24 @@ void exec_file(const char *filename) {
 
 void exec_binary_extended(const char *filename) {
     int idx = find_file_index(filename);
-    if (idx == -1) { kprint("바이너리 파일을 찾을 수 없습니다.\n"); return; }
+    if (idx == -1) { kprint("The binary file could not be found.\n"); return; }
     uint8 buffer[BLOCK_SIZE * MAX_DIRECT_BLOCKS];
     if (knixfs_read_file(&file_table[idx].inode, buffer, sizeof(buffer)) != 0) {
-         kprint("바이너리 파일 읽기 오류.\n");
+         kprint("Binary file read error.\n");
          return;
     }
     if (buffer[0] == 0x7F && buffer[1] == 'E' &&
         buffer[2] == 'L' && buffer[3] == 'F') {
-         kprint("ELF 바이너리 감지됨.\n");
+         kprint("ELF binary detected.\n");
          Elf32_Ehdr *header = (Elf32_Ehdr*)buffer;
          char numbuf[16];
-         kprint("엔트리 포인트: ");
+         kprint("Entry Point: ");
          simple_itoa(header->e_entry, numbuf);
          kprint(numbuf); kprint("\n");
          void (*entry_point)() = (void (*)())(buffer + (header->e_entry));
          entry_point();
     } else {
-         kprint("플랫 바이너리 실행 중...\n");
+         kprint("Running flat binary...\n");
          void (*entry_point)() = (void (*)())buffer;
          entry_point();
     }
@@ -128,15 +128,15 @@ void edit_file(const char *filename) {
     int idx = find_file_index(filename);
     if (idx != -1) {
         if (knixfs_read_file(&file_table[idx].inode, (uint8*)buffer, sizeof(buffer)) != 0) {
-            kprint("파일 읽기 오류.\n");
+            kprint("File read error.\n");
             return;
         }
     } else {
         buffer[0] = '\0';
     }
-    kprint("현재 파일 내용:\n");
+    kprint("Current File Content:\n");
     kprint(buffer);
-    kprint("\n새로운 내용을 입력하세요 (한 줄):\n");
+    kprint("\nPlease enter new content (one line):\n");
     char new_line[MAX_CMD_LEN];
     kgets(new_line, MAX_CMD_LEN);
     uint32 current_len = strlen(buffer);
@@ -150,9 +150,9 @@ void edit_file(const char *filename) {
             update_file(filename, (const uint8*)buffer, current_len);
         else
             create_file(filename, (const uint8*)buffer, current_len);
-        kprint("파일 저장됨.\n");
+        kprint("File saved.\n");
     } else {
-        kprint("파일 내용이 너무 깁니다.\n");
+        kprint("File content is too long.\n");
     }
 }
 
@@ -167,7 +167,7 @@ void find_file(const char *pattern) {
             }
         }
     }
-    if (!found) kprint("일치하는 파일이 없습니다.\n");
+    if (!found) kprint("No matching file exists.\n");
 }
 
 char *strstr(const char *haystack, const char *needle) {

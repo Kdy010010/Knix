@@ -18,33 +18,33 @@ void process_command(const char *cmd) {
 
     if (strcmp(tokens[0], "help") == 0) {
         kprint("Commands:\n");
-        kprint("  help               - 도움말\n");
-        kprint("  ls [-l]            - 파일 목록\n");
-        kprint("  cat <file>         - 파일 내용 출력\n");
-        kprint("  write <file> <msg> - 파일 생성/업데이트\n");
-        kprint("  cp <src> <dst>     - 파일 복사\n");
-        kprint("  mv <src> <dst>     - 파일 이동/이름 변경\n");
-        kprint("  rm <file>          - 파일 삭제\n");
-        kprint("  chmod <file> <mode>- 파일 권한 변경\n");
-        kprint("  chown <file> <uid> - 파일 소유자 변경\n");
-        kprint("  stat <file>        - 파일 정보 출력\n");
-        kprint("  touch <file>       - 빈 파일 생성\n");
-        kprint("  append <file> <msg>- 파일에 내용 추가\n");
-        kprint("  df                 - 남은 디스크 블록 수\n");
-        kprint("  usb                - USB 장치 상태\n");
-        kprint("  exec <file>        - 스크립트 실행\n");
-        kprint("  execbin <file>     - 바이너리 실행 (ELF 확장 지원)\n");
-        kprint("  edit <file>        - 텍스트 편집기\n");
-        kprint("  find <pattern>     - 파일 검색\n");
-        kprint("  sysinfo            - 시스템 정보\n");
-        kprint("  fork <bin>         - 바이너리 파일로 프로세스 생성\n");
-        kprint("  schedule           - 프로세스 스케줄러 실행\n");
-        kprint("  netinfo            - 네트워크 정보 출력\n");
-        kprint("  nettest            - 테스트 패킷 전송\n");
-        kprint("  netapp             - 네트워킹 응용프로그램 실행\n");
-        kprint("  reboot             - 시스템 재부팅\n");
-        kprint("  shutdown           - 시스템 종료\n");
-        kprint("  exit               - CLI 종료\n");
+        kprint("  help               - Show help\n");
+        kprint("  ls [-l]            - List files\n");
+        kprint("  cat <file>         - Display file contents\n");
+        kprint("  write <file> <msg> - Create/update a file\n");
+        kprint("  cp <src> <dst>     - Copy a file\n");
+        kprint("  mv <src> <dst>     - Move/rename a file\n");
+        kprint("  rm <file>          - Delete a file\n");
+        kprint("  chmod <file> <mode>- Change file permissions\n");
+        kprint("  chown <file> <uid> - Change file owner\n");
+        kprint("  stat <file>        - Display file information\n");
+        kprint("  touch <file>       - Create an empty file\n");
+        kprint("  append <file> <msg>- Append content to a file\n");
+        kprint("  df                 - Show available disk blocks\n");
+        kprint("  usb                - Display USB device status\n");
+        kprint("  exec <file>        - Execute a script\n");
+        kprint("  execbin <file>     - Execute a binary (supports ELF format)\n");
+        kprint("  edit <file>        - Open text editor\n");
+        kprint("  find <pattern>     - Search for files\n");
+        kprint("  sysinfo            - Display system information\n");
+        kprint("  fork <bin>         - Create a process from a binary file\n");
+        kprint("  schedule           - Run process scheduler\n");
+        kprint("  netinfo            - Display network information\n");
+        kprint("  nettest            - Send test packets\n");
+        kprint("  netapp             - Run a networking application\n");
+        kprint("  reboot             - Reboot the system\n");
+        kprint("  shutdown           - Shut down the system\n");
+        kprint("  exit               - Exit CLI\n");
     }
     else if (strcmp(tokens[0], "ls") == 0) {
         uint32 i;
@@ -67,13 +67,13 @@ void process_command(const char *cmd) {
     else if (strcmp(tokens[0], "cat") == 0) {
         if (token_count < 2) { kprint("Usage: cat <filename>\n"); return; }
         int idx = find_file_index(tokens[1]);
-        if (idx == -1) { kprint("파일을 찾을 수 없습니다.\n"); return; }
+        if (idx == -1) { kprint("File not found.\n"); return; }
         uint8 buffer[BLOCK_SIZE * MAX_DIRECT_BLOCKS];
         if (knixfs_read_file(&file_table[idx].inode, buffer, sizeof(buffer)) == 0) {
             uint32 size = file_table[idx].inode.size;
             if (size < sizeof(buffer)) buffer[size] = '\0'; else buffer[sizeof(buffer)-1] = '\0';
             kprint((const char*)buffer); kprint("\n");
-        } else { kprint("파일 읽기 오류.\n"); }
+        } else { kprint("File read error.\n"); }
     }
     else if (strcmp(tokens[0], "write") == 0) {
         if (token_count < 3) { kprint("Usage: write <filename> <message>\n"); return; }
@@ -86,57 +86,57 @@ void process_command(const char *cmd) {
         msg[pos] = '\0';
         if (find_file_index(tokens[1]) != -1) {
             if (update_file(tokens[1], (const uint8*)msg, (uint32)strlen(msg)) == 0)
-                kprint("파일 업데이트 성공.\n");
+                kprint("File update successful.\n");
             else
-                kprint("파일 업데이트 오류.\n");
+                kprint("File update error.\n");
         } else {
             if (create_file(tokens[1], (const uint8*)msg, (uint32)strlen(msg)) != -1)
-                kprint("파일 생성 성공.\n");
+                kprint("File creation successful.\n");
             else
-                kprint("파일 생성 오류.\n");
+                kprint("File creation error.\n");
         }
     }
     else if (strcmp(tokens[0], "cp") == 0) {
         if (token_count < 3) { kprint("Usage: cp <src> <dst>\n"); return; }
         if (copy_file(tokens[1], tokens[2]) != -1)
-            kprint("파일 복사 성공.\n");
+            kprint("File copy successful.\n");
         else
-            kprint("파일 복사 오류.\n");
+            kprint("File copy error.\n");
     }
     else if (strcmp(tokens[0], "mv") == 0) {
         if (token_count < 3) { kprint("Usage: mv <src> <dst>\n"); return; }
         if (rename_file(tokens[1], tokens[2]) == 0)
-            kprint("파일 이름 변경 성공.\n");
+            kprint("File renaming successful.\n");
         else
-            kprint("파일 이름 변경 오류.\n");
+            kprint("File renaming error.\n");
     }
     else if (strcmp(tokens[0], "rm") == 0) {
         if (token_count < 2) { kprint("Usage: rm <filename>\n"); return; }
         if (delete_file(tokens[1]) == 0)
-            kprint("파일 삭제 성공.\n");
+            kprint("File deletion successful.\n");
         else
-            kprint("파일 삭제 오류.\n");
+            kprint("File deletion error.\n");
     }
     else if (strcmp(tokens[0], "chmod") == 0) {
         if (token_count < 3) { kprint("Usage: chmod <filename> <mode>\n"); return; }
         int idx = find_file_index(tokens[1]);
-        if (idx == -1) { kprint("파일을 찾을 수 없습니다.\n"); return; }
+        if (idx == -1) { kprint("File not found.\n"); return; }
         file_table[idx].mode = simple_atoi(tokens[2]);
         save_file_table();
-        kprint("권한 변경 완료.\n");
+        kprint("Permission change completed.\n");
     }
     else if (strcmp(tokens[0], "chown") == 0) {
         if (token_count < 3) { kprint("Usage: chown <filename> <owner>\n"); return; }
         int idx = find_file_index(tokens[1]);
-        if (idx == -1) { kprint("파일을 찾을 수 없습니다.\n"); return; }
+        if (idx == -1) { kprint("File not found.\n"); return; }
         file_table[idx].owner = simple_atoi(tokens[2]);
         save_file_table();
-        kprint("소유자 변경 완료.\n");
+        kprint("Owner change completed.\n");
     }
     else if (strcmp(tokens[0], "stat") == 0) {
         if (token_count < 2) { kprint("Usage: stat <filename>\n"); return; }
         int idx = find_file_index(tokens[1]);
-        if (idx == -1) { kprint("파일을 찾을 수 없습니다.\n"); return; }
+        if (idx == -1) { kprint("File not found.\n"); return; }
         kprint("Name: "); kprint(file_table[idx].name); kprint("\nSize: ");
         char numbuf[16];
         simple_itoa(file_table[idx].inode.size, numbuf); kprint(numbuf); kprint(" bytes\nHash: ");
@@ -148,11 +148,11 @@ void process_command(const char *cmd) {
         if (token_count < 2) { kprint("Usage: touch <filename>\n"); return; }
         if (find_file_index(tokens[1]) == -1) {
             if (create_file(tokens[1], (const uint8*)"", 0) != -1)
-                kprint("파일 생성(터치) 성공.\n");
+                kprint("File creation (touch) successful.\n");
             else
-                kprint("터치 오류.\n");
+                kprint("Touch error.\n");
         } else {
-            kprint("파일이 이미 존재합니다.\n");
+            kprint("The file already exists.\n");
         }
     }
     else if (strcmp(tokens[0], "append") == 0) {
@@ -165,21 +165,21 @@ void process_command(const char *cmd) {
         }
         msg[pos] = '\0';
         if (append_file(tokens[1], (const uint8*)msg, (uint32)strlen(msg)) == 0)
-            kprint("내용 추가 성공.\n");
+            kprint("Content addition successful.\n");
         else
-            kprint("내용 추가 오류.\n");
+            kprint("Error adding content.\n");
     }
     else if (strcmp(tokens[0], "df") == 0) {
         uint32 free_count = 0, i;
         for (i = 0; i < MAX_BLOCKS; i++) {
             if (fs.free_block_bitmap[i]) free_count++;
         }
-        kprint("남은 블록 수: ");
+        kprint("Number of blocks remaining: ");
         char numbuf[16];
         simple_itoa(free_count, numbuf); kprint(numbuf); kprint("\n");
     }
     else if (strcmp(tokens[0], "usb") == 0) {
-        kprint("USB 장치 수: ");
+        kprint("Number of USB devices: ");
         char numbuf[16];
         simple_itoa(usb_device_count, numbuf); kprint(numbuf); kprint("\n");
     }
@@ -205,26 +205,26 @@ void process_command(const char *cmd) {
     else if (strcmp(tokens[0], "fork") == 0) {
         if (token_count < 2) { kprint("Usage: fork <binary_file>\n"); return; }
         int idx = find_file_index(tokens[1]);
-        if (idx == -1) { kprint("바이너리 파일을 찾을 수 없습니다.\n"); return; }
+        if (idx == -1) { kprint("Binary file not found.\n"); return; }
         uint8 buffer[BLOCK_SIZE * MAX_DIRECT_BLOCKS];
         if (knixfs_read_file(&file_table[idx].inode, buffer, sizeof(buffer)) != 0) {
-            kprint("파일 읽기 오류.\n");
+            kprint("File Read Error.\n");
             return;
         }
         int pid = sys_create_process((void (*)())buffer);
         if (pid != -1) {
-            kprint("새 프로세스 생성, PID: ");
+            kprint("Create a new process, PID: ");
             char numbuf[16];
             simple_itoa(pid, numbuf);
             kprint(numbuf); kprint("\n");
         } else {
-            kprint("프로세스 생성 오류.\n");
+            kprint("Process Creation Error.\n");
         }
     }
     else if (strcmp(tokens[0], "schedule") == 0) {
-        kprint("프로세스 스케줄러 실행...\n");
+        kprint("Run Process Scheduler...\n");
         schedule();
-        kprint("스케줄러 종료.\n");
+        kprint("Shutting down the scheduler.\n");
     }
     else if (strcmp(tokens[0], "netinfo") == 0) {
         netinfo_cmd();
@@ -242,10 +242,10 @@ void process_command(const char *cmd) {
         shutdown_system();
     }
     else if (strcmp(tokens[0], "exit") == 0) {
-        kprint("CLI 종료...\n");
+        kprint("Shutting down the CLI...\n");
         while (1);
     }
     else {
-        kprint("알 수 없는 명령어입니다. 'help'를 입력하세요.\n");
+        kprint("Unknown command. Please type 'help'.\n");
     }
 }

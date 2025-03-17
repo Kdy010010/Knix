@@ -19,17 +19,17 @@ void usb_scan() {
     usb_devices[1].subclass = USB_SUBCLASS_BOOT;
     usb_devices[1].protocol = USB_PROTOCOL_MOUSE;
 
-    kprint("USB 장치 스캔 완료. 개수: ");
+    kprint("USB Device Scan Completed. Number: ");
     kprint_hex(usb_device_count);
     kprint("\n");
 }
 
 void usb_keyboard_handler() {
-    kprint("USB 키보드 이벤트 발생.\n");
+    kprint("USB Keyboard Event Occurred.\n");
 }
 
 void usb_mouse_handler() {
-    kprint("USB 마우스 이벤트 발생.\n");
+    kprint("USB Mouse Event Occurred.\n");
 }
 
 void usb_poll() {
