@@ -1,52 +1,58 @@
-; bootloader.asm - Knix OS용 간단한 부트로더 예제
-; NASM으로 컴파일: nasm -f bin bootloader.asm -o bootloader.bin
-
 [BITS 16]
-[ORG 0x7C00]      ; 부트로더 로드 주소 명시
+[ORG 0x7C00]
 
 section .text
 global _start
 _start:
-    ; BIOS가 전달한 부트 드라이브 번호(DL)를 메모리에 저장
-    mov [boot_drive], dl
+    mov [boot_drive], dl  ; BIOS에서 전달된 부트 드라이브 번호 저장
 
-    ; 텍스트 모드 설정 및 화면 클리어
+    ; 화면 클리어
     mov ax, 0x0003
     int 0x10
 
-    ; 부트 메시지 출력
     mov si, boot_msg
     call print_string
 
-    ; 커널 로드: 디스크의 섹터 2부터 36개 섹터를 메모리 0x8000에 로드
-    mov ax, 0x0000
+    ; CHS 모드 사용
+    mov si, chs_mode_msg
+    call print_string
+
+    ; 메모리 클리어 (커널을 로드할 0x1000 영역을 0으로 초기화)
+    mov cx, 512
+    mov di, 0x1000
+    xor ax, ax
+clear_loop:
+    stosw
+    loop clear_loop
+
+    ; CHS 모드로 디스크 읽기 (LBA 1을 CHS로 변환)
+    mov ax, 0x1000
     mov es, ax
-    mov bx, 0x8000 ; ES:BX = 0x0000:0x8000
-    mov ah, 0x02    ; 읽기 기능
-    mov al, 36      ; 섹터 수
-    mov ch, 0       ; 실린더 0
-    mov dh, 0       ; 헤드 0
-    mov cl, 2       ; 시작 섹터 (2번)
+    mov bx, 0x0000   ; ES:BX = 0x1000:0x0000
+    mov ah, 0x02     ; BIOS 디스크 읽기 기능
+    mov al, 36       ; 섹터 수
+    mov ch, 0        ; 실린더 0
+    mov dh, 0        ; 헤드 0
+    mov cl, 2        ; 섹터 2부터 읽기 (LBA 1을 CHS로 변환)
     mov dl, [boot_drive]
     int 0x13
-    jc disk_error
+    jc disk_error    ; CHS 실패 시 오류 메시지
 
-    jmp 0x0000:0x8000  ; 커널 실행 (성공 시)
+    ; 💡 메모리 덤프 추가 (커널이 정상적으로 로드되었는지 확인)
+    mov si, mem_dump_msg
+    call print_string
+    mov cx, 16       ; 첫 16바이트 출력
+    mov si, 0x1000   ; 커널이 로드된 메모리 주소
+dump_loop:
+    lodsb
+    call print_hex
+    loop dump_loop
+
+    jmp 0x1000:0x0000  ; 커널 실행 (정상적으로 로드되었으면 점프)
 
 disk_error:
     mov si, err_msg
     call print_string
-    mov ah, 0x0E
-    mov al, 'E'  ; 오류 코드 표시
-    int 0x10
-    mov al, 'R'
-    int 0x10
-    mov al, ':'
-    int 0x10
-
-    ; AH 값을 16진수로 출력하는 코드 추가
-    mov al, ah
-    call print_hex
     jmp $
 
 print_hex:
@@ -55,12 +61,12 @@ print_hex:
     push cx
     push dx
 
-    mov bx, ax       ; 오류 코드(AH)를 BX에 저장
-    shr bx, 4        ; 상위 4비트를 얻음
+    mov bx, ax
+    shr bx, 4
     call print_nibble
 
-    mov bx, ax       ; 다시 원래 값으로 복원
-    and bx, 0x0F     ; 하위 4비트만 남김
+    mov bx, ax
+    and bx, 0x0F
     call print_nibble
 
     pop dx
@@ -70,10 +76,10 @@ print_hex:
     ret
 
 print_nibble:
-    add bx, '0'      ; 숫자로 변환
+    add bx, '0'
     cmp bx, '9'
     jbe .print
-    add bx, 7        ; A~F 처리
+    add bx, 7
 
 .print:
     mov al, bl
@@ -91,11 +97,12 @@ print_string:
 .done:
     ret
 
-; 데이터 섹션 (같은 .text 섹션 내에 배치)
+; 데이터 영역
 boot_msg  db "Loading Knix OS kernel...", 0
+chs_mode_msg db "Using CHS mode...", 0
+mem_dump_msg db "Memory dump: ", 0
 err_msg   db "Disk read error!", 0
 boot_drive db 0
 
-; 512바이트 패딩 및 부트 시그니처
 times 510 - ($ - $$) db 0
 dw 0xAA55
