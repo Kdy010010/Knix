@@ -3,7 +3,7 @@
 #include "disk.h"
 
 /*=========================*/
-/* 4. Persistent File System (KnixFS) */
+/* 4. 저장되는 파일 시스템 (KnixFS) */
 /*=========================*/
 KnixFS fs;
 
