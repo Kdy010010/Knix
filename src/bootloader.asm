@@ -1,54 +1,91 @@
-; bootloader.asm - Knix OS용 간단한 부트로더 예제
-; NASM으로 컴파일: nasm -f bin bootloader.asm -o bootloader.bin
-
 [BITS 16]
-[ORG 0x7C00]            ; BIOS가 부트 섹터를 0x7C00에 로드합니다.
+[ORG 0x7C00]
 
-start:
-    ; BIOS가 전달한 부트 드라이브 번호(DL)를 메모리에 저장
-    mov [boot_drive], dl
+section .text
+global _start
+_start:
+    mov [boot_drive], dl  ; BIOS에서 전달된 부트 드라이브 번호 저장
 
-    ; (선택 사항) 텍스트 모드 설정 및 화면 클리어
+    ; 화면 클리어
     mov ax, 0x0003
     int 0x10
 
-    ; 부트 메시지 출력
     mov si, boot_msg
     call print_string
 
-    ; 커널 로드: 디스크의 섹터 2부터 10개 섹터를 메모리 0x8000에 로드
-    mov bx, 0x8000      ; 커널 로드 주소
-    mov di, bx          ; 로드할 메모리 포인터
-    mov dh, 0           ; 헤드 0
-    mov ch, 0           ; 실린더 0
-    mov cl, 2           ; 시작 섹터 번호 (2번 섹터부터 시작)
-    mov dl, [boot_drive] ; 부트 드라이브 번호
+    ; CHS 모드 사용
+    mov si, chs_mode_msg
+    call print_string
 
-    mov cx, 10          ; 읽을 섹터 수 (10개 섹터)
-read_sector:
-    push cx           ; 남은 섹터 수 보존
-    mov ah, 0x02      ; BIOS 디스크 읽기 함수
-    mov al, 1         ; 한 번에 1 섹터씩 읽음
-    mov bx, di        ; 로드할 메모리 주소
-    int 0x13          ; BIOS 인터럽트 호출
-    jc disk_error     ; 에러 발생 시 disk_error 루틴으로 이동
-    add di, 512       ; 1 섹터(512바이트) 만큼 다음 메모리 주소로 이동
-    inc cl            ; 다음 섹터 번호 (단순 증가: 실제 환경에서는 섹터 오버플로우 등을 고려해야 함)
-    pop cx
-    dec cx
-    jnz read_sector
+    ; 메모리 클리어 (커널을 로드할 0x1000 영역을 0으로 초기화)
+    mov cx, 512
+    mov di, 0x1000
+    xor ax, ax
+clear_loop:
+    stosw
+    loop clear_loop
 
-    ; 커널 로드 완료 후, 로드된 커널로 점프 (세그먼트 0x0000, 오프셋 0x8000)
-    jmp 0x0000:0x8000
+    ; CHS 모드로 디스크 읽기 (LBA 1을 CHS로 변환)
+    mov ax, 0x1000
+    mov es, ax
+    mov bx, 0x0000   ; ES:BX = 0x1000:0x0000
+    mov ah, 0x02     ; BIOS 디스크 읽기 기능
+    mov al, 36       ; 섹터 수
+    mov ch, 0        ; 실린더 0
+    mov dh, 0        ; 헤드 0
+    mov cl, 2        ; 섹터 2부터 읽기 (LBA 1을 CHS로 변환)
+    mov dl, [boot_drive]
+    int 0x13
+    jc disk_error    ; CHS 실패 시 오류 메시지
+
+    ; 💡 메모리 덤프 추가 (커널이 정상적으로 로드되었는지 확인)
+    mov si, mem_dump_msg
+    call print_string
+    mov cx, 16       ; 첫 16바이트 출력
+    mov si, 0x1000   ; 커널이 로드된 메모리 주소
+dump_loop:
+    lodsb
+    call print_hex
+    loop dump_loop
+
+    jmp 0x1000:0x0000  ; 커널 실행 (정상적으로 로드되었으면 점프)
 
 disk_error:
     mov si, err_msg
     call print_string
     jmp $
 
-;-------------------------------------------------------
-; 간단한 문자열 출력 서브루틴 (BIOS teletype, AH=0x0E)
-; SI가 문자열 시작 주소를 가리킵니다. 문자열은 0으로 종료됩니다.
+print_hex:
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov bx, ax
+    shr bx, 4
+    call print_nibble
+
+    mov bx, ax
+    and bx, 0x0F
+    call print_nibble
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+print_nibble:
+    add bx, '0'
+    cmp bx, '9'
+    jbe .print
+    add bx, 7
+
+.print:
+    mov al, bl
+    int 0x10
+    ret
+
 print_string:
     mov ah, 0x0E
 .print_loop:
@@ -59,12 +96,13 @@ print_string:
     jmp .print_loop
 .done:
     ret
-;-------------------------------------------------------
 
+; 데이터 영역
 boot_msg  db "Loading Knix OS kernel...", 0
+chs_mode_msg db "Using CHS mode...", 0
+mem_dump_msg db "Memory dump: ", 0
 err_msg   db "Disk read error!", 0
 boot_drive db 0
 
-; 부트 섹터는 512바이트여야 하므로 남은 부분을 0으로 채움
 times 510 - ($ - $$) db 0
-dw 0xAA55           ; 부트 섹터 시그니처
+dw 0xAA55
