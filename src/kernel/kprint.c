@@ -36,12 +36,34 @@ void kprint_hex(uint32 num) {
     kprint("0x");
     kprint(buffer);
 }
-
 int kgetchar() {
-    /* Stub: 키보드 입력 반환 */
-    return 0;
-}
+    unsigned char status;
+    unsigned char scancode;
 
+    // Wait until the output buffer is full (bit 0 of 0x64 is set)
+    do {
+        __asm__ volatile ("inb $0x64, %0" : "=a"(status));
+    } while ((status & 0x01) == 0);
+
+    // Read from keyboard data port
+    __asm__ volatile ("inb $0x60, %0" : "=a"(scancode));
+
+    // Simple US QWERTY keymap for demonstration (only lowercase letters and digits)
+    static char scancode_table[128] = {
+        0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b', /* 0x00-0x0E */
+        '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',     /* 0x0F-0x1C */
+        0,   'a','s','d','f','g','h','j','k','l',';','\'','`',         /* 0x1D-0x29 */
+        0,  '\\','z','x','c','v','b','n','m',',','.','/', 0,           /* 0x2A-0x35 */
+        '*', 0,  ' ', /* rest ignored */
+    };
+
+    // Handle only key-press (not key-release: high bit set)
+    if (scancode & 0x80) {
+        return 0; // key release, ignore
+    } else {
+        return scancode_table[scancode];
+    }
+}
 void kgets(char *buffer, size_t maxlen) {
     size_t i = 0;
     int ch;
