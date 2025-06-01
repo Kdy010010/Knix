@@ -35,8 +35,10 @@
 typedef unsigned int uint32;
 typedef unsigned int uint32_t;
 typedef unsigned char uint8;
+typedef unsigned char uint8_t;
 typedef unsigned long long size_t;
 typedef unsigned short uint16;  // ELF 헤더 파싱용
+typedef unsigned short uint16_t;
 
 /*=========================*/
 /* 6. ELF Header (단순화, 32비트) */
