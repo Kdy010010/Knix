@@ -1,5 +1,4 @@
 #include "disk.h"
-#include <stdint.h>
 
 /* I/O 포트 접근을 위한 인라인 어셈블리 */
 static inline uint8_t inb(uint16_t port) {
