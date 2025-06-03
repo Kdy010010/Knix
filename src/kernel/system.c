@@ -5,7 +5,7 @@
 
 void sysinfo() {
     kprint("Knix OS - System Info\n");
-    kprint("Version: 0.1\n");
+    kprint("Version: 0.3\n");
     kprint("Author: Unknown\n");
 }
 
